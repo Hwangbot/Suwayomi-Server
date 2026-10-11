@@ -11,6 +11,7 @@ concurrency:
 
 jobs:
   check_wrapper:
+    if: github.repository_owner == 'Suwayomi'
     name: Validate Gradle Wrapper
     runs-on: ubuntu-latest
     steps:
@@ -78,6 +79,7 @@ jobs:
           if-no-files-found: error
 
   jlink:
+    if: github.repository_owner == 'Suwayomi'
     runs-on: ${{ matrix.os }}
     strategy:
       matrix:
