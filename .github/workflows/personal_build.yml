@@ -1,7 +1,7 @@
 name: Personal build
 
 # Builds this fork on every push to master and publishes a GitHub Release
-# with the server jar and a ready-to-run Windows zip.
+# with the server jar and ready-to-run macOS and Windows bundles.
 
 on:
   push:
@@ -72,8 +72,17 @@ jobs:
           if-no-files-found: error
 
   jlink:
-    name: Package Windows JRE
-    runs-on: windows-latest
+    name: Package ${{ matrix.name }} JRE
+    runs-on: ${{ matrix.os }}
+    strategy:
+      matrix:
+        include:
+          - os: macos-15
+            name: macOS-arm64
+          - os: macos-15-intel
+            name: macOS-x64
+          - os: windows-latest
+            name: windows-x64
     steps:
       - name: Set up JDK
         uses: actions/setup-java@v6
@@ -87,13 +96,17 @@ jobs:
       - name: Upload JRE package
         uses: actions/upload-artifact@v7
         with:
-          name: windows-x64-jre
+          name: ${{ matrix.name }}-jre
           path: suwa
 
   bundle:
-    name: Make Windows bundle
+    name: Make ${{ matrix.name }} bundle
     needs: [build, jlink]
     runs-on: ubuntu-latest
+    strategy:
+      fail-fast: false
+      matrix:
+        name: [macOS-arm64, macOS-x64, windows-x64]
     steps:
       - uses: actions/download-artifact@v8
         with:
@@ -101,7 +114,7 @@ jobs:
           path: server/build
       - uses: actions/download-artifact@v8
         with:
-          name: windows-x64-jre
+          name: ${{ matrix.name }}-jre
           path: jre
       - uses: actions/download-artifact@v8
         with:
@@ -111,15 +124,15 @@ jobs:
         with:
           name: scripts
 
-      - name: Make windows-x64 bundle
+      - name: Make ${{ matrix.name }} bundle
         run: |
           mkdir upload
           tar -xpf scripts.tar.gz
-          scripts/bundler.sh -o upload/ windows-x64
+          scripts/bundler.sh -o upload/ ${{ matrix.name }}
 
       - uses: actions/upload-artifact@v7
         with:
-          name: windows-x64
+          name: ${{ matrix.name }}
           path: upload/*
           if-no-files-found: error
 
@@ -136,7 +149,8 @@ jobs:
           path: release
       - uses: actions/download-artifact@v8
         with:
-          name: windows-x64
+          pattern: '{macOS-arm64,macOS-x64,windows-x64}'
+          merge-multiple: true
           path: release
 
       - name: Generate tag name
